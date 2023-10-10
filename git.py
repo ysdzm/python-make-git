@@ -4,6 +4,7 @@ import zlib
 import os
 import datetime
 import stat
+import binascii
 
 def main():
     args = sys.argv
@@ -28,6 +29,12 @@ def main():
     
     if command == "meta-data":
         meta_data(args[2])
+
+    if command == "write-tree":
+        write_tree()
+
+    if command == "ls-files":
+        ls_files()
 
 
 # $ git hash-object -w <file-name>
@@ -134,7 +141,7 @@ def update_index(mode,sha1,path):
         extendedFlag = 0b0  # 1または0、デフォルトは0
         optionalFlag = (((0b0 | assumeValid) << 1) | extendedFlag) << 14
         flagRes = optionalFlag | len(path)
-       #  print(flagRes)
+        # print(flagRes)
         entrie += bytes.fromhex(format(flagRes, '04x'))
 
         # filename
@@ -161,6 +168,57 @@ def update_index(mode,sha1,path):
 
     with open("output", "wb") as file:
         file.write(header + entrie + sha1_check_sum)
+
+# $ git ls-files -s
+def ls_files():
+
+    index = read_file_b(".git/index")
+    header = index[:12]
+    entries = int.from_bytes(header[9:12],byteorder='big')
+
+    file_list = []
+
+    top = 12
+    for i in range(entries):
+        content = index[top:top+62]
+        flag = content[60:62]
+        namelen = int.from_bytes(flag, byteorder='big') & 0xFFF
+
+        mode = oct(int(content[24:28].hex(),16))
+        sha1 = "".join('{:02x}'.format(byte) for byte in content[40:60])
+        name = index[top+62:top+62+namelen].decode('utf-8')
+
+        padding = calc_padding(namelen)
+        top += 62 + namelen + padding
+
+        file_list.append((mode,sha1,name))
+        # print(f'{mode} {sha1} {name}')
+    
+    return file_list
+
+
+# $ git write-tree
+def write_tree():
+    print("write-tree")
+
+    # .git/indexの読み取り
+    file_list = ls_files()
+
+    for file_info in file_list:
+        mode, sha1, name = file_info
+        print(f'{mode} {sha1} {name}')
+        
+        hash = bytes.fromhex(sha1)
+        content = f'{mode[2:]} {name}\0'.encode('utf-8') + hash
+        header = f'tree {len(content)}\0'.encode('utf-8')
+        store = header + content
+        # print(" ".join('{:02x}'.format(byte) for byte in store))
+
+        sha1_hash = hashlib.sha1(store).hexdigest()
+
+        # print(content)
+        print(sha1_hash)
+
 
 
 def add(files):
@@ -224,12 +282,28 @@ def meta_data(file_path):
     except Exception as e:
         print(f'メタデータの取得中にエラーが発生しました: {str(e)}')
 
+def calc_padding(n):
+    floor = (n - 2) // 8
+    target = (floor + 1) * 8 + 2
+    ret = target - n
 
+    return ret
 
 # ファイル読み込み
 def read_file(file_path):
     try:
         with open(file_path, "r", encoding="utf-8") as file:
+            file_contents = file.read()
+            return file_contents
+    except FileNotFoundError:
+        print(f"ファイル '{file_path}' が見つかりませんでした。")
+    except Exception as e:
+        print(f"ファイルの読み取り中にエラーが発生しました: {str(e)}")
+
+# バイナリファイル読み込み
+def read_file_b(file_path):
+    try:
+        with open(file_path, "rb") as file:
             file_contents = file.read()
             return file_contents
     except FileNotFoundError:
