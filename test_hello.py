@@ -1,19 +1,24 @@
-from your_script import hello
 import sys
 from io import StringIO
 import contextlib
 
 def test_hello():
-    # Capture stdout
+    # 仮想のコマンドライン引数を設定
+    sys.argv = ["python", "git", "hello"]
+
+    # gitモジュールからhello関数をimport
+    from git import hello
+
+    # stdoutをキャプチャ
     captured_output = StringIO()
     sys.stdout = captured_output
 
-    # Call hello function
+    # hello関数を呼び出す
     hello()
 
-    # Get the output
+    # 出力を取得
     sys.stdout = sys.__stdout__
     output = captured_output.getvalue().strip()
 
-    # Check if output is correct
+    # 出力が正しいことを確認
     assert output == "hello", "Output is not 'hello'"
