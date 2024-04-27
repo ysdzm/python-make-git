@@ -4,6 +4,7 @@ __VERSION__ = '1.0'
 
 __DOC__ = """
 Usage: 
+    git hello
     git add [<pathspec>...]
     git commit [-m <msg>]
     git hash-object <file>...
@@ -20,7 +21,12 @@ Options:
 
 def main():
     args = docopt(__DOC__, version=__VERSION__)
-    print(args)
+
+    if args["hello"]:
+        hello()
+
+def hello():
+    print("hello")
 
 if __name__ == "__main__":
     main()
