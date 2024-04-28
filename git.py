@@ -2,6 +2,7 @@ from docopt import docopt
 import hashlib
 import zlib
 import os
+import sys
 
 __VERSION__ = '1.0'
 
@@ -45,7 +46,6 @@ def hash_object(file_list,w):
         full_data = header + data.encode()
         # SHA-1ハッシュを計算
         sha1_hash = hashlib.sha1(full_data).hexdigest()
-        print(sha1_hash)
         if w:
             # zlibで圧縮
             compressed_data = zlib.compress(full_data, level=1)
@@ -55,7 +55,8 @@ def hash_object(file_list,w):
             write_file(".git/objects/"+sha1_hash[:2]+"/"+sha1_hash[2:],compressed_data)
         # 返り値リストに追加
         sha1_hash_list.append(sha1_hash)
-    return sha1_hash
+    print('\n'.join(sha1_hash_list))
+    return sha1_hash_list
 
 # ファイル読み込み
 def read_file(file_path):
